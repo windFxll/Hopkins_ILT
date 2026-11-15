@@ -1,0 +1,16 @@
+device=cuda:0
+profile=demo
+target=realistic
+grid_size=256
+pixel_size_nm=4.0
+gpu=NVIDIA GeForce RTX 3050 Laptop GPU
+optimization_seconds=22.592
+verification_seconds=0.089
+peak_gpu_memory_mb=123.5
+best_step=375
+steps_completed=716
+stop_reason=early convergence: fixed-beta loss/IoU/mask-change plateau
+initial_iou=0.830432
+optimized_iou=0.978367
+initial_contour_mean_nm=8.3487
+optimized_contour_mean_nm=0.9584

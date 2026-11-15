@@ -1,0 +1,2 @@
+# PyTorch 使用用户现有 CUDA 环境，不在这里锁定 wheel。
+numpy>=1.24
