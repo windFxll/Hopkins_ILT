@@ -9,6 +9,13 @@ description = "Differentiable PyTorch Hopkins/Abbe partially coherent imaging"
 requires-python = ">=3.10"
 dependencies = [
   "numpy>=1.24",
+  "torch>=2.1",
+]
+
+[project.optional-dependencies]
+bench = [
+  "matplotlib>=3.7",
+  "pillow>=9",
 ]
 
 [tool.setuptools.packages.find]

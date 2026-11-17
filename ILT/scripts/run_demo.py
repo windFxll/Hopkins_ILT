@@ -11,7 +11,7 @@ REPO = ROOT.parent
 sys.path.insert(0, str(REPO / "Hopkins"))
 sys.path.insert(0, str(ROOT))
 
-from hopkins import AbbeImaging
+from hopkins import make_imaging
 from hopkins.resist import hard_resist
 from ilt.layouts import LAYOUTS, load_target
 from ilt.optimization import PixelILT
@@ -32,14 +32,22 @@ def main():
     parser.add_argument("--target", type=Path, default=None,
                         help="GLP/NPY/PNG target; overrides --layout")
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--imaging", choices=("abbe", "socs"), default="abbe")
+    parser.add_argument("--socs-orders", type=int, choices=(8, 16, 32),
+                        default=16)
+    parser.add_argument("--socs-kernel-batch-size", type=int, default=8)
+    parser.add_argument("--socs-eigh-mode",
+                        choices=("low_rank", "explicit", "auto"),
+                        default="low_rank")
     args = parser.parse_args()
+    suffix = "_socs" if args.imaging == "socs" else ""
     if args.output is None:
         if args.target is not None:
-            args.output = ROOT.parent / "output" / f"{args.target.stem}_{args.profile}"
-        else:
             args.output = ROOT.parent / "output" / (
-                "demo" if args.layout == "realistic" else "complex"
-            )
+                f"{args.target.stem}_{args.profile}{suffix}")
+        else:
+            args.output = ROOT.parent / "output" / ((
+                "demo" if args.layout == "realistic" else "complex") + suffix)
     args.output.mkdir(parents=True, exist_ok=True)
 
     device = torch.device(args.device)
@@ -60,14 +68,37 @@ def main():
 
     print(f"Optimize: {optics_cfg.grid_size}x{optics_cfg.grid_size} @ "
           f"{optics_cfg.pixel_size_nm:.1f} nm, {optics_cfg.source_count} source points, "
-          f"{optics_cfg.boundary_mode}")
-    imaging = AbbeImaging(optics_cfg, device)
+          f"{optics_cfg.boundary_mode}, imaging={args.imaging}")
+
+    def build_imaging(config):
+        return make_imaging(
+            config, device, method=args.imaging,
+            num_orders=args.socs_orders,
+            kernel_batch_size=args.socs_kernel_batch_size,
+            eigh_mode=args.socs_eigh_mode)
+
+    imaging = build_imaging(optics_cfg)
     with torch.no_grad():
         initial_mask = target.clone()
         initial_aerial_opt = imaging(initial_mask)
         initial_printed_opt = hard_resist(initial_aerial_opt, optics_cfg.resist_threshold)
 
     result = PixelILT(imaging, opt_cfg).optimize(target)
+
+    socs_report = ""
+    if args.imaging == "socs":
+        socs_report = (
+            f"socs_orders={args.socs_orders}\n"
+            f"socs_max_orders={imaging.max_orders}\n"
+            f"socs_rank={imaging.rank}\n"
+            f"socs_energy_fraction="
+            f"{imaging.energy_fraction(args.socs_orders):.6f}\n"
+            f"socs_subgrid={imaging.subgrid_shape[0]}x"
+            f"{imaging.subgrid_shape[1]}\n"
+            f"socs_eigh_mode={imaging.eigh_mode_used}\n"
+            f"socs_tcc_build_seconds={imaging.tcc_build_seconds:.4f}\n"
+            f"socs_eigh_seconds={imaging.eigh_seconds:.4f}\n"
+        )
 
     # Verification uses the denser sampling selected by the run profile.
     verify_cfg = profile.verification
@@ -76,13 +107,23 @@ def main():
     if device.type == "cuda":
         torch.cuda.empty_cache()
     verify_start = time.perf_counter()
-    verifier = AbbeImaging(verify_cfg, device)
+    verifier = build_imaging(verify_cfg)
     with torch.no_grad():
         initial_aerial = verifier(initial_mask)
         initial_printed = hard_resist(initial_aerial, verify_cfg.resist_threshold)
         optimized_aerial = verifier(result.optimized_mask)
         optimized_printed = hard_resist(optimized_aerial, verify_cfg.resist_threshold)
     verify_seconds = time.perf_counter() - verify_start
+
+    if args.imaging == "socs":
+        socs_report += (
+            f"verify_socs_max_orders={verifier.max_orders}\n"
+            f"verify_socs_rank={verifier.rank}\n"
+            f"verify_socs_energy_fraction="
+            f"{verifier.energy_fraction(args.socs_orders):.6f}\n"
+            f"verify_socs_tcc_build_seconds={verifier.tcc_build_seconds:.4f}\n"
+            f"verify_socs_eigh_seconds={verifier.eigh_seconds:.4f}\n"
+        )
 
     arrays = {
         "target": target_np,
@@ -116,6 +157,9 @@ def main():
     report = (
         f"device={device}\n"
         f"profile={profile.name}\n"
+        f"imaging={args.imaging}\n"
+        f"boundary_mode={optics_cfg.boundary_mode}\n"
+        f"{socs_report}"
         f"target={target_name}\n"
         f"grid_size={optics_cfg.grid_size}\n"
         f"pixel_size_nm={optics_cfg.pixel_size_nm}\n"

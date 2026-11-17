@@ -34,7 +34,7 @@ def main():
     fig, axes = plt.subplots(1, 2, figsize=(13, 6.2), constrained_layout=True)
     for ax, image, title in (
         (axes[0], native, "Native ICCAD target (1024², 1 nm/px)"),
-        (axes[1], working, "ILT_GPU target (256², 4 nm/px)"),
+        (axes[1], working, "ILT target (256², 4 nm/px)"),
     ):
         ax.imshow(image, origin="lower", extent=(0, 1024, 0, 1024),
                   cmap="gray_r", vmin=0, vmax=1, interpolation="nearest")

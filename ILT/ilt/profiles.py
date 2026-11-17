@@ -19,7 +19,7 @@ def make_run_profile(name: str, iterations: int = 1000) -> RunProfile:
         optics = OpticsConfig()
         optimization = replace(OptimizationConfig(), iterations=iterations)
         verification = replace(
-            optics, source_rings=6, source_points_per_ring=24,
+            optics, source_rings=24, source_points_per_ring=144,
             source_batch_size=8,
         )
     elif name == "iccad-native":
@@ -37,7 +37,7 @@ def make_run_profile(name: str, iterations: int = 1000) -> RunProfile:
         )
         # Independent denser radial sampling while keeping 8 GB verification safe.
         verification = replace(
-            optics, source_rings=6, source_points_per_ring=12,
+            optics, source_rings=16, source_points_per_ring=96,
             source_batch_size=1,
         )
     else:

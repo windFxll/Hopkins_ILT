@@ -1,0 +1,66 @@
+{
+  "model": "K=8 SOCS + 15% frequency kernel correction + residual CNN",
+  "checkpoint": "kernel15_cnn_k8.pt",
+  "sha256": "241500024ed08db94e70390525547176e6873ceb8e1a77d0cdfab4c543058828",
+  "epoch": 30,
+  "trainable_params": 16722,
+  "grid_size": 800,
+  "pixel_size_nm": 1.0,
+  "boundary_mode": "periodic",
+  "aerial_scale": 0.869140625,
+  "threshold": 0.346585,
+  "test": {
+    "n": 1000,
+    "baseline": {
+      "iou_clear": 0.9113197042665548,
+      "dice_clear": 0.9535101692822419,
+      "iou_feature": 0.8388593542592273,
+      "dice_feature": 0.912147308087731,
+      "band_mse": 0.004688514045672491,
+      "rel_mse": 0.016423213361762463,
+      "contour_nm": 6.930087815714626
+    },
+    "kernel_only": {
+      "iou_clear": 0.9306261787362599,
+      "dice_clear": 0.9640076788717453,
+      "iou_feature": 0.875707489647471,
+      "dice_feature": 0.9335844818816199,
+      "band_mse": 0.0025726065371418374,
+      "rel_mse": 0.008988887337036431,
+      "contour_nm": 5.412064511772591
+    },
+    "hybrid": {
+      "iou_clear": 0.9798837127566034,
+      "dice_clear": 0.9898341891675145,
+      "iou_feature": 0.965463456882003,
+      "dice_feature": 0.9824170899138649,
+      "band_mse": 0.0006897073579020798,
+      "rel_mse": 0.0024135056482627987,
+      "contour_nm": 1.4470100064781704
+    },
+    "delta_vs_baseline": {
+      "iou_clear": 0.06856400849004851,
+      "dice_clear": 0.03632401988527282,
+      "contour_nm": -5.4830778092364545,
+      "band_mse": -0.0039988066877704115
+    },
+    "delta_vs_kernel_only": {
+      "iou_clear": 0.049257534020343476,
+      "dice_clear": 0.025826510295769316,
+      "contour_nm": -3.965054505294421,
+      "band_mse": -0.0018828991792397573
+    },
+    "fraction_improved_vs_baseline": 1.0,
+    "fraction_improved_vs_kernel_only": 1.0,
+    "fraction_worse_gt_0.02_iou_vs_kernel_only": 0.0
+  },
+  "overfitting_check": {
+    "train200_iou": 0.980485,
+    "val_iou": 0.979967,
+    "test_iou": 0.979884,
+    "train200_minus_test_iou": 0.000601,
+    "continuation_epoch": 36,
+    "continuation_test_iou": 0.979833,
+    "continuation_train200_minus_test_iou": 0.000545
+  }
+}

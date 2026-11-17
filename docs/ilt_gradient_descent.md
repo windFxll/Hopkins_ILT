@@ -1,6 +1,6 @@
 # 可微 ILT 的梯度下降：公式与计算流程
 
-> 对应代码：`pr-1-ilt-gpu` 分支的 `ILT_GPU/` 子项目。
+> 对应代码：本仓库的 `Hopkins/`（光学）与 `ILT/`（优化）包。
 > 本文把 **代码实际实现** 与 **理论上更严格的做法** 分开写，便于核对哪些地方是近似、哪些地方需要修正。
 >
 > **公式渲染**：本文使用 `$...$`（行内）和 `$$...$$`（独立公式）；GitHub、VS Code Markdown Preview、Typora 等均可直接渲染。
@@ -47,7 +47,7 @@ $$
 
 ## 2. 掩模参数化
 
-代码：`ILT_GPU/ilt_gpu/optimization/parameterization.py` 的 `FilteredMask`。
+代码：`ILT/ilt/optimization/parameterization.py` 的 `FilteredMask`。
 
 $$
 \begin{aligned}
@@ -79,7 +79,7 @@ $$
 
 ## 3. 光学前向：Hopkins 模型（Abbe 点源求和实现）
 
-代码：`ILT_GPU/ilt_gpu/optics/abbe.py` 和 `pupil.py`。
+代码：`Hopkins/hopkins/abbe/imaging.py` 和 `pupil.py`。
 
 物理模型是 Hopkins 部分相干成像；代码用 Abbe 点源求和来数值实现它（两者在数学上等价，见 §10.11）。
 
@@ -97,7 +97,7 @@ $$
 
 ### 3.2 光源采样
 
-代码：`ILT_GPU/ilt_gpu/optics/source.py`。当前只实现环形照明。采样公式为
+代码：`Hopkins/hopkins/source.py`。当前只实现环形照明。采样公式为
 
 $$
 \begin{aligned}
@@ -188,7 +188,7 @@ demo 的 `resist_blur_sigma_nm=0`，未启用。
 
 ## 4. 光刻胶模型
 
-代码：`ILT_GPU/ilt_gpu/resist/models.py`。
+代码：`Hopkins/hopkins/resist/models.py`。
 
 ### 4.1 优化时：软阈值（可微）
 
@@ -211,7 +211,7 @@ $$
 
 ## 5. 损失函数
 
-代码：`ILT_GPU/ilt_gpu/optimization/losses.py` 的 `ilt_loss`。
+代码：`ILT/ilt/optimization/losses.py` 的 `ilt_loss`。
 
 $$
 \begin{aligned}
@@ -317,7 +317,7 @@ $$
 
 ## 7. 优化循环
 
-代码：`ILT_GPU/ilt_gpu/optimization/optimizer.py` 的 `PixelILT.optimize`。
+代码：`ILT/ilt/optimization/optimizer.py` 的 `PixelILT.optimize`。
 
 1. 初始化 logits：目标内 $+1.5$，目标外 $-1.5$。
 2. 优化器：Adam，`learning_rate=0.08`；
@@ -380,16 +380,16 @@ for step in range(iterations):
 
 | 公式 / 步骤 | 代码位置 |
 |---|---|
-| 掩模参数化 | `ILT_GPU/ilt_gpu/optimization/parameterization.py: FilteredMask` |
-| 光源采样 | `ILT_GPU/ilt_gpu/optics/source.py` |
-| 光瞳构建 | `ILT_GPU/ilt_gpu/optics/pupil.py` |
-| Abbe 前向 | `ILT_GPU/ilt_gpu/optics/abbe.py: AbbeImaging` |
-| 软/硬光刻胶 | `ILT_GPU/ilt_gpu/resist/models.py` |
-| 损失 | `ILT_GPU/ilt_gpu/optimization/losses.py` |
-| 优化循环 | `ILT_GPU/ilt_gpu/optimization/optimizer.py: PixelILT` |
-| 运行配置 | `ILT_GPU/ilt_gpu/config.py`, `profiles.py` |
-| demo 入口 | `ILT_GPU/scripts/run_demo.py` |
-| 前向一致性测试 | `ILT_GPU/tests/forward_consistency.py` |
+| 掩模参数化 | `ILT/ilt/optimization/parameterization.py: FilteredMask` |
+| 光源采样 | `Hopkins/hopkins/source.py` |
+| 光瞳构建 | `Hopkins/hopkins/pupil.py` |
+| Abbe 前向 | `Hopkins/hopkins/abbe/imaging.py: AbbeImaging` |
+| 软/硬光刻胶 | `Hopkins/hopkins/resist/models.py` |
+| 损失 | `ILT/ilt/optimization/losses.py` |
+| 优化循环 | `ILT/ilt/optimization/optimizer.py: PixelILT` |
+| 运行配置 | `ILT/ilt/config.py`, `profiles.py` |
+| demo 入口 | `ILT/scripts/run_demo.py` |
+| 前向一致性测试 | `Hopkins/tests/smoke_test.py` |
 
 ---
 
@@ -526,7 +526,7 @@ $$
 
 - **物理模型是 Hopkins 部分相干成像**；
 - **数值实现是 Abbe 点源求和**（等价于对光源做离散化，不显式构造 4D TCC）；
-- ILT_GPU 选择 Abbe 是因为它显存友好、容易 GPU 批处理；代价是每个光源点都要做一次 iFFT；
+- ILT 选择 Abbe 是因为它显存友好、容易 GPU 批处理；代价是每个光源点都要做一次 iFFT；
 - 如果显式构造 TCC，光源离散后 TCC 是若干“移位光瞳外积”的和，存储/计算量更大，通常只在特定小规模场景使用。
 
 因此，说“光学模型用的是 Abbe”指的是**求解方式**，不是说物理模型不是 Hopkins。

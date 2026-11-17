@@ -9,13 +9,14 @@ class OpticsConfig:
     numerical_aperture: float = 1.35
     sigma_in: float = 0.6
     sigma_out: float = 0.9
-    source_rings: int = 3
-    source_points_per_ring: int = 12
+    source_rings: int = 12
+    source_points_per_ring: int = 72
     defocus_nm: float = 0.0
-    boundary_mode: str = "isolated"
+    boundary_mode: str = "periodic"
     resist_threshold: float = 0.346585
     resist_blur_sigma_nm: float = 0.0
     source_batch_size: int = 6
+    aerial_scale: float = 1.0
 
     @property
     def fft_size(self) -> int:

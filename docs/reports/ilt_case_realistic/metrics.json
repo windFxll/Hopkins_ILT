@@ -1,0 +1,78 @@
+{
+  "case": "ilt_realistic",
+  "layout": "realistic",
+  "grid_size": 800,
+  "pixel_size_nm": 1.0,
+  "threshold": 0.346585,
+  "device": "cuda:0",
+  "torch": "2.5.1+cu121",
+  "model": {
+    "checkpoint": "D:\\Sync\\project\\diffusion4ilt\\Hopkins_ILT\\Hopkins_surrogate\\models\\kernel15_cnn_k8.pt",
+    "sha256": "241500024ed08db94e70390525547176e6873ceb8e1a77d0cdfab4c543058828",
+    "epoch": 30,
+    "trainable_params": 16722
+  },
+  "settings": {
+    "iterations": 1000,
+    "learning_rate": 0.08,
+    "minimum_learning_rate": 0.002,
+    "log_every": 10,
+    "hardening_fraction": 0.3,
+    "mask_beta_start": 1.8,
+    "mask_beta_end": 10.0,
+    "resist_beta_start": 8.0,
+    "resist_beta_end": 40.0,
+    "mask_filter_sigma_px": 10.0,
+    "border_margin_px": 0,
+    "edge_weight": 3.0,
+    "boundary_radius_px": 8,
+    "tv_weight": 0.01,
+    "binary_weight": 0.001,
+    "area_weight": 0.08,
+    "gradient_clip": 5.0,
+    "early_stop": true,
+    "early_stop_min_step": 350,
+    "early_stop_window": 10,
+    "early_stop_patience": 3,
+    "early_stop_relative_loss": 0.0005,
+    "early_stop_iou_span": 0.0002,
+    "early_stop_mask_change": 0.0002
+  },
+  "timing_s": {
+    "model_load": 0.6865824999986216,
+    "target_create": 0.0013365000049816445,
+    "initial_eval": 0.27275070000905544,
+    "optimize": 28.38917570000922,
+    "final_eval_and_save": 0.17668930000218097,
+    "total": 31.067305700009456,
+    "ms_per_step": 28.38917570000922,
+    "steps_per_second": 35.22469305086852
+  },
+  "iterations": {
+    "requested": 1000,
+    "completed": 1000,
+    "best_step": 690,
+    "stop_reason": "maximum iterations reached"
+  },
+  "initial": {
+    "feature_iou": 0.7456005811691284,
+    "clear_iou": 0.7221285104751587,
+    "contour_nm": 16.853139159612525
+  },
+  "optimized": {
+    "feature_iou": 0.9760960936546326,
+    "clear_iou": 0.9803773760795593,
+    "contour_nm": 1.1443934320093727
+  },
+  "mask": {
+    "components": 30,
+    "tiny_components_le4px": 0,
+    "total_variation": 0.024549435824155807,
+    "feature_fraction": 0.3510640625
+  },
+  "improvement": {
+    "feature_iou": 0.23049551248550415,
+    "clear_iou": 0.25824886560440063,
+    "contour_nm": -15.708745727603151
+  }
+}
