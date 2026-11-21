@@ -16,3 +16,5 @@ Hopkins/results/
 Hopkins_surrogate/data/
 Hopkins_surrogate/results/
 Hopkins_surrogate/runs/
+ilt_flowdps/runs/
+ilt_flowdps/checkpoints/
