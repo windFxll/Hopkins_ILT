@@ -5,6 +5,8 @@
 
 - [`Hopkins/`](Hopkins/)：可微 Abbe / SOCS 部分相干成像，支持周期与孤立边界、离焦、胶模型。
 - [`ILT/`](ILT/)：像素型 ILT 优化（mask 参数化、损失、Adam 循环）。
+- [`ilt_flowdps/`](ilt_flowdps/)：SOCS/Proxy 的 TV、小波、拉普拉斯 ILT，以及实验性
+  FlowDPS / FlowLPS / FlowSGS 对比；包含统一 Proxy 评价、耗时与 mask 可视化。
 - [`Hopkins_surrogate/`](Hopkins_surrogate/)：最终代理模型（K=8 SOCS + 15% 频域核修正 +
   残差 CNN）及其推理封装。
 - [`docs/reports/k8_kernel15_cnn_report.html`](docs/reports/k8_kernel15_cnn_report.html)：
