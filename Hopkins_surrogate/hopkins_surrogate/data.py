@@ -355,7 +355,7 @@ def build_cache(dataset_root: str | Path = DEFAULT_DATASET_ROOT,
         "binary_semantics": "1=clear",
         "pixel_size_nm": pixel_size_nm,
         "grid_size": int(size),
-        "threshold_dat": THRESHOLD_DAT,
+        "threshold_dat": float(config.tau_dat),
         "target_resample": "bilinear_physical_coords",
         "manifest_sha256": manifest_sha,
         "split_hash": splits["split_hash"],
@@ -426,7 +426,8 @@ def estimate_clear_scale(cache_dir: str | Path, split: str = "train",
         "q99_median": float(np.median(q99)),
         "median_median": float(np.median(med)),
         "split_hash": splits["split_hash"],
-        "tau_dat": THRESHOLD_DAT,
+        "tau_dat": float(meta.get("config", {}).get(
+            "tau_dat", THRESHOLD_DAT)),
     }
 
 

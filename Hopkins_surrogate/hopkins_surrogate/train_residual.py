@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import math
 import time
-from dataclasses import replace
+from dataclasses import fields, replace
 from pathlib import Path
 
 import torch
@@ -49,7 +49,8 @@ def build_hybrid_from_checkpoint(path: str | Path, device,
 @torch.no_grad()
 def validate(hybrid: CorrectedResidualImaging, loader: DataLoader,
              cfg: SurrogateConfig, s: float, pixel_nm: float,
-             compute_contour: bool = True) -> dict:
+             compute_contour: bool = True,
+             use_correction: bool = True) -> dict:
     hybrid.residual.eval()
     rows_base, rows_kernel, rows_hybrid = [], [], []
     for batch in loader:
@@ -59,7 +60,10 @@ def validate(hybrid: CorrectedResidualImaging, loader: DataLoader,
         binary = batch["binary"].to(mask.device).float()
         for i in range(mask.shape[0]):
             base = hybrid.kernel_model(mask[i], use_correction=False)
-            kernel = hybrid.kernel_model(mask[i], use_correction=True)
+            if use_correction:
+                kernel = hybrid.kernel_model(mask[i], use_correction=True)
+            else:
+                kernel = base
             delta = hybrid.residual(mask[i], kernel / s)
             hyb = (kernel + delta).clamp_min(0.0)
             kw = dict(tau=cfg.tau_dat, pixel_size_nm=pixel_nm,
@@ -69,10 +73,23 @@ def validate(hybrid: CorrectedResidualImaging, loader: DataLoader,
             rows_hybrid.append(evaluate_sample(hyb, target[i], binary[i], **kw))
     agg_h = aggregate(rows_hybrid)
     flat = _flatten_agg(agg_h, "val_")
-    flat["val_score"] = (
-        flat.get("val_band_mse_mean", float("nan"))
-        + 0.3 * (1.0 - flat.get("val_dice_clear_mean", float("nan")))
-        + 0.1 * flat.get("val_rel_mse_mean", float("nan")))
+    if (float(getattr(cfg, "lambda_full", 0.0)) > 0
+            or float(getattr(cfg, "lambda_multi", 0.0)) > 0):
+        # Full-field objective: early stopping must track the whole image,
+        # not only the tau0 contour band.
+        flat["val_score"] = (
+            float(getattr(cfg, "lambda_band", 1.0))
+            * flat.get("val_band_mse_mean", float("nan"))
+            + float(getattr(cfg, "lambda_dice",
+                            getattr(cfg, "lambda_bin", 0.3)))
+            * (1.0 - flat.get("val_dice_clear_mean", float("nan")))
+            + float(getattr(cfg, "lambda_full", 0.0))
+            * flat.get("val_rel_mse_mean", float("nan")))
+    else:
+        flat["val_score"] = (
+            flat.get("val_band_mse_mean", float("nan"))
+            + 0.3 * (1.0 - flat.get("val_dice_clear_mean", float("nan")))
+            + 0.1 * flat.get("val_rel_mse_mean", float("nan")))
     agg_k = _flatten_agg(aggregate(rows_kernel), "val_kernel_")
     agg_b = _flatten_agg(aggregate(rows_base), "val_base_")
     flat.update(agg_k)
@@ -86,13 +103,15 @@ def train_residual(kernel_checkpoint: str | Path, cache_dir: str | Path,
                    hidden: int = 24, delta_max: float = 0.10,
                    downscale: int = 4, lr: float = 1e-3,
                    lambda_res: float = 1e-3,
+                   use_correction: bool = True,
                    smoke: bool = False,
                    resume_checkpoint: str | Path | None = None,
                    start_epoch: int = 0,
                    schedule_epochs: int | None = None,
                    init_best_score: float | None = None,
                    init_best_epoch: int | None = None,
-                   min_delta: float = 0.0) -> dict:
+                   min_delta: float = 0.0,
+                   loss_weights: dict | None = None) -> dict:
     cache_dir = Path(cache_dir)
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -111,6 +130,11 @@ def train_residual(kernel_checkpoint: str | Path, cache_dir: str | Path,
         kernel_ckpt, device)
     kernel_model.eval()
     cfg = SurrogateConfig.from_dict(kernel_ckpt["surrogate_config"])
+    if loss_weights:
+        allowed = {f.name for f in fields(SurrogateConfig)}
+        clean = {k: v for k, v in loss_weights.items() if k in allowed}
+        if clean:
+            cfg = replace(cfg, **clean)
     s = float(kernel_ckpt["calibration"]["s"])
     residual = ResidualCNN(
         hidden=int(hidden), delta_max=float(delta_max),
@@ -185,6 +209,7 @@ def train_residual(kernel_checkpoint: str | Path, cache_dir: str | Path,
         "train_config": tc.to_dict(),
         "hidden": hidden, "delta_max": delta_max, "downscale": downscale,
         "lr": lr, "lambda_res": lambda_res,
+        "use_correction": bool(use_correction),
         "cache_meta": cache_meta,
         "split_hash": splits["split_hash"],
         "resume_checkpoint": (str(Path(resume_checkpoint).resolve())
@@ -221,6 +246,7 @@ def train_residual(kernel_checkpoint: str | Path, cache_dir: str | Path,
             "kernel_checkpoint": str(Path(kernel_checkpoint).resolve()),
             "hidden": int(hidden), "delta_max": float(delta_max),
             "downscale": int(downscale),
+            "use_correction": bool(use_correction),
             "surrogate_config": cfg.to_dict(),
             "train_config": tc.to_dict(),
             "calibration": kernel_ckpt["calibration"],
@@ -245,7 +271,8 @@ def train_residual(kernel_checkpoint: str | Path, cache_dir: str | Path,
             parts_sum = {}
             for i in range(mask.shape[0]):
                 with torch.no_grad():
-                    socs = hybrid.kernel_model(mask[i], use_correction=True)
+                    socs = hybrid.kernel_model(
+                        mask[i], use_correction=use_correction)
                 delta = hybrid.residual(mask[i], socs / s)
                 pred = (socs + delta).clamp_min(0.0)
                 loss, parts = residual_total_loss(
@@ -283,7 +310,8 @@ def train_residual(kernel_checkpoint: str | Path, cache_dir: str | Path,
         train_metrics = {k: v / max(1, n_batches) for k, v in sums.items()}
         val_metrics = validate(
             hybrid, val_loader, cfg, s, pixel_nm,
-            compute_contour=(ge % max(1, tc.cd_every) == 0))
+            compute_contour=(ge % max(1, tc.cd_every) == 0),
+            use_correction=use_correction)
         score = val_metrics["val_score"]
         improved = score < best_score - float(min_delta)
         if improved:
@@ -351,6 +379,10 @@ def main() -> None:
     parser.add_argument("--downscale", type=int, default=4)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--lambda-res", type=float, default=1e-3)
+    parser.add_argument("--use-correction", action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help="use the frozen kernel correction (default: yes); "
+                             "pass --no-use-correction for plain K=8 + CNN")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--limit-train", type=int, default=None)
     parser.add_argument("--limit-val", type=int, default=None)
@@ -377,7 +409,8 @@ def main() -> None:
         args.kernel_checkpoint, args.cache, run_dir,
         device_name=args.device, train_cfg=tc, hidden=args.hidden,
         delta_max=args.delta_max, downscale=args.downscale, lr=args.lr,
-        lambda_res=args.lambda_res, smoke=args.smoke,
+        lambda_res=args.lambda_res, use_correction=args.use_correction,
+        smoke=args.smoke,
         resume_checkpoint=args.resume_checkpoint,
         start_epoch=args.start_epoch,
         schedule_epochs=args.schedule_epochs,

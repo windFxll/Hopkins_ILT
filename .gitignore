@@ -18,3 +18,12 @@ Hopkins_surrogate/results/
 Hopkins_surrogate/runs/
 ilt_flowdps/runs/
 ilt_flowdps/checkpoints/
+
+# local-only archives / experiments / S-Litho comparison
+Hopkins_surrogate/archive/
+Hopkins_surrogate/experiments/
+slitho_compare/
+ilt_flowdps/run/
+docs/reports/air_proxy_versions.html
+docs/reports/air_proxy_versions_trends.png
+docs/reports/ilt_mask_validation/

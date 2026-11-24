@@ -84,13 +84,34 @@ def residual_total_loss(pred: torch.Tensor, target: torch.Tensor,
     temperature = float(cfg.dice_temp_norm) * float(scale)
     l_band = band_loss(pred, target, cfg.tau_dat, width)
     l_dice = dice_loss(pred, target_binary, cfg.tau_dat, temperature)
+    l_full = relative_loss(pred, target)
+
+    factors = list(getattr(cfg, "multi_tau_factors", []) or [])
+    lambda_multi = float(getattr(cfg, "lambda_multi", 0.0))
+    if factors and lambda_multi > 0:
+        l_multi = torch.stack([
+            dice_loss(pred, (target > cfg.tau_dat * float(f)).float(),
+                      cfg.tau_dat * float(f), temperature)
+            for f in factors]).mean()
+    else:
+        l_multi = torch.zeros((), device=pred.device)
+
     l_res = delta.square().mean()
-    total = (l_band + float(cfg.lambda_bin) * l_dice
-             + float(lambda_res) * l_res)
+    # Defaults (lambda_band=1, lambda_dice=0.3, lambda_full=0,
+    # lambda_multi=0) reproduce the original residual loss exactly.
+    total = (
+        float(getattr(cfg, "lambda_band", 1.0)) * l_band
+        + float(getattr(cfg, "lambda_dice",
+                         getattr(cfg, "lambda_bin", 0.3))) * l_dice
+        + float(getattr(cfg, "lambda_full", 0.0)) * l_full
+        + lambda_multi * l_multi
+        + float(lambda_res) * l_res)
     parts = {
         "loss": float(total.detach()),
         "band": float(l_band.detach()),
         "dice": float(l_dice.detach()),
+        "full": float(l_full.detach()),
+        "multi": float(l_multi.detach()),
         "res": float(l_res.detach()),
         "delta_abs_mean": float(delta.abs().mean().detach()),
         "delta_abs_max": float(delta.abs().max().detach()),

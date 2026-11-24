@@ -47,7 +47,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $opticsRoot = $repoRoot
 if (!$ProxyCheckpoint) {
-    $ProxyCheckpoint = Join-Path $opticsRoot 'Hopkins_surrogate/models/kernel15_cnn_k8.pt'
+    $ProxyCheckpoint = Join-Path $opticsRoot 'Hopkins_surrogate/models/k8_cnn_default.pt'
 }
 if (!$RfCheckpoint) {
     $RfCheckpoint = Join-Path $PSScriptRoot 'checkpoints/rf_latest.pt'

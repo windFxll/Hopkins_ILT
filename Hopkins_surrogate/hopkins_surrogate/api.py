@@ -1,8 +1,9 @@
-"""High-level inference API for the final K=8 lithography surrogate.
+"""High-level inference API for the K=8 lithography surrogate.
 
-The final model is a frozen K=8 SOCS imaging model with a 15% frequency-domain
-kernel correction and a bounded residual CNN.  This module hides the checkpoint
-plumbing and exposes a small, ILT-friendly callable:
+The default model is a frozen K=8 SOCS imaging model with a bounded residual
+CNN; checkpoints may additionally carry a low-rank frequency-domain kernel
+correction.  This module hides the checkpoint plumbing and exposes a small,
+ILT-friendly callable:
 
     model = HopkinsSurrogate.from_pretrained(device="cuda:0")
     aerial = model(mask)                  # differentiable w.r.t. mask
@@ -13,9 +14,10 @@ Conventions (match ``Hopkins`` and ``ILT``):
 - mask: ``[H, W]`` or ``[B, H, W]``, 1 = opaque feature, 0 = clear.
 - grid: 800 x 800 at 1 nm/px, periodic boundary.
 - aerial: same shape as the mask, in raw ``.dat`` intensity units
-  (``aerial_scale = 0.869140625`` is already included).
-- threshold: ``0.346585``; ``clear = aerial > threshold`` (1 = clear),
-  ``printed = aerial < threshold`` (1 = feature, matching ILT targets).
+  (the checkpoint's ``aerial_scale`` is already included).
+- threshold: taken from the checkpoint; ``clear = aerial > threshold``
+  (1 = clear), ``printed = aerial < threshold`` (1 = feature, matching ILT
+  targets).
 """
 
 from __future__ import annotations
@@ -31,7 +33,7 @@ from .checkpoint import build_model_from_checkpoint
 from .residual import CorrectedResidualImaging, ResidualCNN
 
 DEFAULT_CHECKPOINT = (Path(__file__).resolve().parents[1]
-                      / "models" / "kernel15_cnn_k8.pt")
+                      / "models" / "k8_cnn_default.pt")
 
 
 def _resolve_device(device: str | torch.device | None) -> torch.device:
@@ -55,8 +57,8 @@ def load_hybrid(checkpoint: str | Path = DEFAULT_CHECKPOINT,
     if "residual_state" not in ckpt or "kernel_ckpt" not in ckpt:
         raise ValueError(
             "checkpoint is not a residual-CNN checkpoint (missing "
-            "'residual_state' or 'kernel_ckpt'); use the final "
-            "kernel15_cnn_k8.pt")
+            "'residual_state' or 'kernel_ckpt'); pass a hybrid surrogate "
+            "checkpoint such as k8_cnn_default.pt")
     kernel_model, _ = build_model_from_checkpoint(
         ckpt["kernel_ckpt"], device, strict=strict)
     residual = ResidualCNN(
@@ -187,7 +189,7 @@ class HopkinsSurrogate(nn.Module):
         - ``aerial``: float tensor in raw ``.dat`` units;
         - ``clear``: bool tensor, 1 = clear (``aerial > threshold``);
         - ``printed``: bool tensor, 1 = feature (``aerial < threshold``);
-        - ``threshold``: float, ``0.346585``.
+        - ``threshold``: float, the checkpoint's resist threshold.
         """
         aerial = self.forward(mask, use_correction=use_correction,
                               use_residual=use_residual)

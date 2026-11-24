@@ -69,9 +69,11 @@ LPS / SGS 使用边界加权 Bernoulli 版图损失（除以 resist beta），�
 Flow 方法走完整采样日程，不使用 Adam 的早停条件。
 
 SOCS 是同一个 Proxy 实例内的 K=8 base，光学配置、基底、标定与 Proxy 相同，
-只移除学习到的核修正及 CNN。它不是全阶 Abbe 参考解。
-此 checkpoint 固定 800×800、1 nm/px、periodic，mask 1=opaque feature；
-光刻阈值 0.346585，强度标定 0.869140625。更换光学配置通常需要匹配的 Proxy 权重。
+只移除学习到的核修正（若有）及 CNN。它不是全阶 Abbe 参考解。
+默认 checkpoint（`Hopkins_surrogate/models/k8_cnn_default.pt`）固定
+800×800、1 nm/px、periodic，mask 1=opaque feature；
+光刻阈值 0.3357889756677475，强度标定 0.85107421875。
+更换光学配置通常需要匹配的 Proxy 权重。
 
 ### Flow 假设与适用范围
 

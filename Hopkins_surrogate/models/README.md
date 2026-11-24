@@ -1,6 +1,33 @@
-# Final model
+# Models
 
-## `kernel15_cnn_k8.pt`
+## 当前默认：`k8_cnn_default.pt`（2026-11-24）
+
+| 项目 | 内容 |
+|---|---|
+| 结构 | K=8 SOCS + 有界残差 CNN（**无核修正**） |
+| 数据集 | 干式空气 S-Litho `slitho_air.slo`，10,000 张 |
+| 光学 | NA=0.93、sigma 0.6–0.9、864 点、defocus=0 |
+| 损失 | band 0.2 / dice 0.05 / full 5.0 / multi 0（无多阈值项） |
+| 可训练参数 | 7,425（CNN；hidden=16、downscale=4、`|ΔI| ≤ 0.15`） |
+| 阈值 / scale | **0.3357889756677475** / `0.85107421875` |
+| 训练 | best epoch 23；第 31 epoch 后因主机内存分配失败中断，best checkpoint 完整使用 |
+| val（1000） | clear IoU **0.9942**、full-field rel MSE **≈5e-5** |
+| multiconfig 10 test | 阈值 IoU **0.9922** / CD **0.71 nm**；defocus 0.9942 / 0.47；光源 0.9853 / 1.37；full RMSE 0.0041 / 0.0041 / 0.0187 |
+
+```python
+from hopkins_surrogate import HopkinsSurrogate
+
+model = HopkinsSurrogate.from_pretrained(device="cuda:0")  # 默认发布模型
+out = model.predict(mask)      # threshold = 0.3357889756677475
+```
+
+报告：[`k8_cnn_default_report.html`](../../docs/reports/k8_cnn_default_report.html)。
+旧 air / 胶内版本已归档在本地 `Hopkins_surrogate/archive/`（不包含在仓库）。
+`kernel15_cnn_k8.pt`（旧纯 AI）保留为历史模型。
+
+## 历史模型
+
+### `kernel15_cnn_k8.pt`
 
 | 项目 | 内容 |
 |---|---|
@@ -38,3 +65,11 @@ checkpoint 内嵌：
 完整报告（数据划分、网络/损失配置、成像对比、过拟合判断）：
 
 [`../../docs/reports/k8_kernel15_cnn_report.html`](../../docs/reports/k8_kernel15_cnn_report.html)
+
+## 本地归档（不包含在仓库）
+
+以下版本只保留在本地 `Hopkins_surrogate/archive/`，不随仓库发布：
+
+- `k8_cnn_newdata.pt` — 胶内 S-Litho resist+BARC 数据集（阈值 0.3125683）
+- `k8_cnn_air.pt` — air baseline（阈值 0.3357889757）
+- `k8_cnn_air_v1a.pt` / `k8_cnn_air_v1b.pt` — 全光场损失中间版本

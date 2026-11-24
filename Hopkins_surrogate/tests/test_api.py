@@ -21,10 +21,10 @@ def test_metadata(model):
     assert DEFAULT_CHECKPOINT.is_file()
     assert model.grid_size == 800
     assert model.pixel_size_nm == 1.0
-    assert model.threshold == pytest.approx(0.346585)
+    assert model.threshold == pytest.approx(0.3357889756677475)
     assert model.tau == pytest.approx(model.threshold)
     assert model.num_orders == 8
-    assert model.config.resist_threshold == pytest.approx(0.346585)
+    assert model.config.resist_threshold == pytest.approx(0.3357889756677475)
     assert not any(p.requires_grad for p in model.parameters())
 
 
@@ -41,10 +41,10 @@ def test_forward_and_predict(model):
     assert out["clear"].shape == (800, 800)
     assert out["clear"].dtype == torch.bool
     assert out["printed"].dtype == torch.bool
-    assert out["threshold"] == pytest.approx(0.346585)
+    assert out["threshold"] == pytest.approx(0.3357889756677475)
     # feature lines are dark; clear region is the majority
     assert float(out["clear"].float().mean()) > 0.5
-    assert bool(out["printed"][0, 0])
+    assert bool(out["printed"][400, 50])
 
 
 def test_batch_and_numpy(model):

@@ -13,6 +13,8 @@ from hopkins_surrogate.metrics import binary_iou
 
 DATASET = Path("E:/diffusio4ilt_dataset")
 HAS_DATA = (DATASET / "layout/png/layout_00001.png").is_file()
+# 当前干式空气数据集（slitho_air.slo）的阈值；胶内旧数据为 0.3125683。
+DAT_THRESHOLD = 0.3357889756677475
 
 
 def _nearest_upsample(binary: np.ndarray, size: int) -> np.ndarray:
@@ -72,5 +74,5 @@ def test_dat_png_alignment_sample1():
     assert layout.shape == (800, 800)
     assert set(np.unique(layout)).issubset({0, 1})
     png = load_aerial_binary(DATASET / "aerial_image/png/aerial_image_00001.png")
-    up = _nearest_upsample(native > 0.346585, 800)
+    up = _nearest_upsample(native > DAT_THRESHOLD, 800)
     assert binary_iou(up, png > 0) > 0.999

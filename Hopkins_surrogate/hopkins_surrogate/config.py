@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 
 from hopkins.config import OpticsConfig
@@ -46,6 +46,13 @@ class SurrogateConfig:
     dice_temp_norm: float = 0.03
     lambda_bin: float = 0.3
     lambda_rel: float = 0.1
+    # residual CNN loss weights (V1 full-field / multi-threshold).
+    # Defaults reproduce the original residual loss exactly.
+    lambda_band: float = 1.0
+    lambda_dice: float = 0.3
+    lambda_full: float = 0.0
+    lambda_multi: float = 0.0
+    multi_tau_factors: list[float] = field(default_factory=list)
     lambda_smooth: float = 0.0
     rel_norm_target: float = 0.05
     rel_norm_mean_max: float = 0.05
