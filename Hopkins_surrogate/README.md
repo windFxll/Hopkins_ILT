@@ -5,6 +5,8 @@
 
 - 阈值 `0.3357889756677475`，`aerial_scale=0.85107421875`
 - V2 全光场损失：band 0.2 / dice 0.05 / full 5.0 / multi 0
+- test（1,000 held-out）：clear IoU **0.9942** / Dice **0.9971** /
+  feature IoU **0.9803** / contour **0.575 nm**
 - val clear IoU 0.9942；multiconfig 10 test：阈值 0.9922 / CD 0.71 nm，
   defocus 0.9942 / 0.47 nm，光源 0.9853 / 1.37 nm
 - 报告：[`k8_cnn_default_report.html`](../docs/reports/k8_cnn_default_report.html)
@@ -63,8 +65,9 @@ printed = out["printed"]          # bool, 1 = feature
 - `model.predict(mask)` 使用 `no_grad`，返回 `aerial`、`clear`、`printed`、`threshold`。
 - 输入支持 `[800, 800]` 或 `[B, 800, 800]`；batch 内部按样本循环。
 - 模型参数全部冻结；`model.config` 是底层 `OpticsConfig`，
-  默认 V2 的 `model.threshold` 为 `0.3357889756677475`。
-- 加载后不需要训练 cache：checkpoint 内嵌核修正、CNN、SOCS 配置与光度标定。
+  默认模型的 `model.threshold` 为 `0.3357889756677475`。
+- 加载后不需要训练 cache：checkpoint 内嵌 CNN、SOCS 配置与光度标定；
+  默认模型没有核修正（历史模型可能带冻结的核修正）。
 
 ## 示例
 
@@ -94,11 +97,12 @@ Hopkins_surrogate/
 ├─ hopkins_surrogate/
 │  ├─ api.py            # HopkinsSurrogate / load_surrogate
 │  ├─ checkpoint.py     # checkpoint 构建与指纹校验
-│  ├─ imaging.py        # 核修正后的 SOCS
-│  ├─ correction.py     # B-spline 频域核修正
+│  ├─ imaging.py        # SOCS（可选核修正）
+│  ├─ correction.py     # 可选 B-spline 频域核修正（默认模型不使用）
 │  ├─ residual.py       # 残差 CNN 与 hybrid 组合
 │  └─ ...               # 训练/评估模块（保留用于检查实现）
-├─ models/kernel15_cnn_k8.pt
+├─ models/k8_cnn_default.pt   # 当前默认
+├─ models/kernel15_cnn_k8.pt  # 历史模型
 ├─ examples/
 └─ tests/
 ```
@@ -109,4 +113,4 @@ Hopkins_surrogate/
 pytest tests -q
 ```
 
-测试使用最终 checkpoint 和合成 mask，不需要外部数据。
+测试使用默认 checkpoint 和合成 mask，不需要外部数据。

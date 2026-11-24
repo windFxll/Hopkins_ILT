@@ -12,7 +12,7 @@
 
 旧实验版本（air baseline / V1a / V1b 等）报告为本地归档，不包含在仓库。
 
-The report is a static snapshot generated from
+The historical report is a static snapshot generated from
 `Hopkins_surrogate/models/kernel15_cnn_k8.pt` and the held-out test split.
 The internal experiment generator and its intermediate figures are not part
 of this release.

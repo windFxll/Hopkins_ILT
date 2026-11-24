@@ -1,30 +1,39 @@
 # Hopkins_ILT
 
-基于 PyTorch 的可微 Hopkins 光刻成像、像素型逆光刻（ILT）优化，以及最终训练好的
+基于 PyTorch 的可微 Hopkins 光刻成像、像素型逆光刻（ILT）优化，以及当前默认的
 **K=8 光刻成像代理模型**。
 
 - [`Hopkins/`](Hopkins/)：可微 Abbe / SOCS 部分相干成像，支持周期与孤立边界、离焦、胶模型。
 - [`ILT/`](ILT/)：像素型 ILT 优化（mask 参数化、损失、Adam 循环）。
 - [`ilt_flowdps/`](ilt_flowdps/)：SOCS/Proxy 的 TV、小波、拉普拉斯 ILT，以及实验性
   FlowDPS / FlowLPS / FlowSGS 对比；包含统一 Proxy 评价、耗时与 mask 可视化。
-- [`Hopkins_surrogate/`](Hopkins_surrogate/)：最终代理模型（K=8 SOCS + 15% 频域核修正 +
-  残差 CNN）及其推理封装。
-- [`docs/reports/k8_kernel15_cnn_report.html`](docs/reports/k8_kernel15_cnn_report.html)：
-  最终模型的完整评估报告（含逐样本成像 vs 二值化 aerial image 对比）。
+- [`Hopkins_surrogate/`](Hopkins_surrogate/)：当前默认代理模型
+  （K=8 SOCS + 轻量残差 CNN，**无核修正**），干式空气数据集 `slitho_air.slo`。
+- [`docs/reports/k8_cnn_default_report.html`](docs/reports/k8_cnn_default_report.html)：
+  当前默认模型的完整评估报告（含跨光学配置与 ILT mask 验证）。
 
-## 最终模型
+## 默认模型（2026-11-24）
 
 | 项目 | 内容 |
 |---|---|
-| 结构 | K=8 SOCS + 15% 频域 B-spline 核修正（冻结）+ 残差 CNN |
-| 可训练参数 | 16,722（401 核修正 + 16,321 CNN） |
+| 结构 | K=8 SOCS + 轻量残差 CNN（**无核修正**） |
+| 数据集 | 干式空气 S-Litho `slitho_air.slo`，10,000 张 |
+| 光学 | NA=0.93、σ=0.6–0.9（864 点）、defocus=0、193 nm、周期边界 |
+| 可训练参数 | 7,425（CNN；hidden=16、downscale=4、`|ΔI| ≤ 0.15`） |
 | 输入 | 800 × 800、1 nm/px、周期边界；mask 1=opaque |
-| 输出 | `.dat` 原始强度单位；阈值 `0.346585` |
-| test（1,000 held-out） | clear IoU **0.9799** / Dice **0.9898** / contour **1.447 nm** |
-| checkpoint | [`Hopkins_surrogate/models/kernel15_cnn_k8.pt`](Hopkins_surrogate/models/kernel15_cnn_k8.pt)（约 95 KB，自包含） |
-| 机器可读指标 | [`Hopkins_surrogate/models/metrics.json`](Hopkins_surrogate/models/metrics.json) |
+| 输出 | 干式空气空间像；阈值 `0.3357889756677475`、`aerial_scale=0.85107421875` |
+| test（1,000 held-out） | clear IoU **0.9942** / Dice **0.9971** / feature IoU **0.9803** / contour **0.575 nm** |
+| 相对 K=8 SOCS baseline | clear IoU 0.8911 → **0.9942**；contour CD 9.92 → **0.58 nm** |
+| checkpoint | [`Hopkins_surrogate/models/k8_cnn_default.pt`](Hopkins_surrogate/models/k8_cnn_default.pt)（约 40 KB，自包含） |
+| 报告 | [`docs/reports/k8_cnn_default_report.html`](docs/reports/k8_cnn_default_report.html)（单文件，图片内嵌） |
 
-checkpoint 内嵌核修正参数、CNN 权重、SOCS 配置和光度标定，推理时不需要训练 cache 或原始数据集。
+checkpoint 内嵌 CNN 权重、SOCS 配置和光度标定；默认模型没有核修正，
+推理时不需要训练 cache 或原始数据集。
+
+历史模型 `kernel15_cnn_k8.pt`（K=8 SOCS + 15% 频域核修正 + 残差 CNN，
+阈值 `0.346585`）仍保留，详见
+[`Hopkins_surrogate/models/README.md`](Hopkins_surrogate/models/README.md) 和
+[`docs/reports/k8_kernel15_cnn_report.html`](docs/reports/k8_kernel15_cnn_report.html)。
 
 ## 安装
 
@@ -60,11 +69,11 @@ for x in range(0, 800, 400):
 
 # 推理（no_grad）：返回 continuous aerial 与两种二值结果
 out = model.predict(mask)
-aerial = out["aerial"]             # float，.dat 原始单位
+aerial = out["aerial"]             # float，干式空气空间像
 clear = out["clear"]               # bool，1 = clear
 printed = out["printed"]           # bool，1 = feature（与 ILT 的 target 一致）
 
-print(aerial.shape, model.threshold)   # (800, 800) 0.346585
+print(aerial.shape, model.threshold)   # (800, 800) 0.3357889756677475
 ```
 
 也可以直接调用 `model(mask)`，它返回 aerial，并且**对 mask 可微**：
@@ -81,9 +90,9 @@ loss.backward()
 | 对象 | 形状 | 语义 |
 |---|---|---|
 | `mask` | `[800, 800]` 或 `[B, 800, 800]` | 1=opaque feature，0=clear；允许软值 `[0,1]` |
-| `aerial` | 同 mask | `.dat` 原始强度单位（已乘 `aerial_scale=0.869140625`） |
-| `clear` | 同 mask，bool | `aerial > 0.346585`，1=clear |
-| `printed` | 同 mask，bool | `aerial < 0.346585`，1=feature |
+| `aerial` | 同 mask | 干式空气空间像（已乘 `aerial_scale=0.85107421875`） |
+| `clear` | 同 mask，bool | `aerial > 0.3357889756677475`，1=clear |
+| `printed` | 同 mask，bool | `aerial < 0.3357889756677475`，1=feature |
 
 - 固定 800×800、1 nm/px、periodic；其他网格会直接报错。
 - batch 输入按 Python 循环处理，不是向量化批处理。
@@ -140,8 +149,9 @@ python Hopkins_surrogate/examples/ilt_with_surrogate.py # 100 步 ILT smoke
 [`docs/reports/ilt_case_realistic/`](docs/reports/ilt_case_realistic/)：
 realistic interconnect、1000 步、feature IoU **0.7456 → 0.9761**、
 contour CD **16.85 → 1.14 nm**，优化耗时 **28.4 s**（35.2 steps/s，RTX 3050）。
-案例包含 target、optimized mask、printed、aerial、mismatch、收敛曲线和
-`metrics.json`。案例生成脚本未包含在发布包中；结果作为静态快照保留。
+该快照由历史模型 `kernel15_cnn_k8.pt` 生成，用于保留完整流程；当前默认模型为
+`k8_cnn_default.pt`，指标不能直接混用。案例包含 target、optimized mask、printed、
+aerial、mismatch、收敛曲线和 `metrics.json`。案例生成脚本未包含在发布包中。
 
 ## 目录结构
 
@@ -156,23 +166,23 @@ Hopkins_ILT/
 │  ├─ scripts/                  # demo / 版图预览
 │  ├─ benchmarks/               # ICCAD-2013 M1_test3.glp
 │  └─ pyproject.toml
-├─ Hopkins_surrogate/           # 最终代理模型
+├─ Hopkins_surrogate/           # 默认代理模型
 │  ├─ hopkins_surrogate/        # 核心包 + api.py
-│  ├─ models/kernel15_cnn_k8.pt # 最终 checkpoint
+│  ├─ models/k8_cnn_default.pt  # 默认 checkpoint
 │  ├─ examples/                 # 推理 / ILT 示例
 │  ├─ tests/
 │  └─ pyproject.toml
 ├─ docs/
 │  ├─ optical_model.md          # Hopkins 光学模型原理
 │  ├─ ilt_gradient_descent.md   # ILT 方法说明
-│  └─ reports/                  # 最终 HTML 评估报告 + 保留的 ILT 案例
+│  └─ reports/                  # 当前报告 + 历史报告 + ILT 案例
 └─ README.md
 ```
 
 ## 测试
 
 ```bash
-# 代理模型（含最终 checkpoint 的前向/反向与 ILT 梯度检查）
+# 代理模型（含默认 checkpoint 的前向/反向与 ILT 梯度检查）
 pytest Hopkins_surrogate/tests -q
 
 # Hopkins 成像包（脚本式自检）
@@ -184,15 +194,19 @@ python Hopkins/tests/socs_test.py --device cpu
 
 ## 报告
 
-最终模型的完整评估（数据划分、网络/损失配置、test 指标、6 组全图 + 3 组局部成像对比、
-过拟合判断）见：
+当前默认模型的完整评估（数据划分、网络/损失配置、test 指标、跨配置同阈值对比、
+ILT mask 交叉验证）见：
 
-[docs/reports/k8_kernel15_cnn_report.html](docs/reports/k8_kernel15_cnn_report.html)
+[docs/reports/k8_cnn_default_report.html](docs/reports/k8_cnn_default_report.html)
+
+历史 `kernel15_cnn_k8.pt` 的评估报告保留在
+[docs/reports/k8_kernel15_cnn_report.html](docs/reports/k8_kernel15_cnn_report.html)。
 
 ## 数据与发布范围
 
-- 本仓库包含最终 checkpoint（约 95 KB）、推理代码、示例、测试和评估报告。
-- 不包含 24 GB 训练 cache、原始数据集、训练中间产物、旧模型以及探索性对比图；
+- 本仓库包含默认 checkpoint（约 40 KB）、推理代码、示例、测试和公开报告
+  （约 3 MB，图片全部内嵌）。
+- 不包含训练 cache、原始数据集、训练中间产物、旧模型以及探索性对比图；
   这些内容保留在本地 `E:/hopkins_surrogate/` 归档中。
 - 训练与评估模块仍保留在 `Hopkins_surrogate/hopkins_surrogate/` 内，便于检查实现；
   发布包不附带训练脚本和实验记录。

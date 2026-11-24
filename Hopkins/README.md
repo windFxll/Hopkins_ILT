@@ -40,7 +40,7 @@ python tests/socs_test.py --device cuda:0 --full
 import torch
 from hopkins import AbbeImaging, OpticsConfig, SocsImaging, make_imaging
 
-cfg = OpticsConfig()                 # 256×256 @ 4nm, 864 光源点
+cfg = OpticsConfig()                 # 256×256 @ 4nm 演示网格；NA=0.93、864 光源点
 device = torch.device("cuda:0")
 mask = torch.zeros((cfg.grid_size, cfg.grid_size), device=device)
 
@@ -56,8 +56,13 @@ aerial = socs(mask)                  # (N, N)，开域归一化为 1
 
 ## SOCS 截断
 
-TCC 的秩受光源点数与频率子网格限制。历史基准（864 点 / 27×27 子网格，
-与 3456 点 Abbe 参考比较，RTX 3050）：
+TCC 的秩受光源点数与频率子网格限制。当前默认光学配置（NA=0.93、
+σ=0.6–0.9、864 光源点）在 256×256 @4 nm 演示网格下，频率子网格为
+19×19，数值秩为 277；K=8 / 16 / 32 / 64 / 128 的能量占比分别为
+**89.75% / 93.36% / 95.93% / 97.77% / 99.16%**。
+
+历史基准（旧 NA=1.35 配置，864 点 / 27×27 子网格，与 3456 点 Abbe
+参考比较，RTX 3050）：
 
 | K | 保留能量 | RMS 误差 | 相对 Abbe864 加速 |
 |---|---|---|---|
@@ -69,13 +74,15 @@ TCC 的秩受光源点数与频率子网格限制。历史基准（864 点 / 27�
 | 256 | 99.6% | 7.36×10⁻⁴ | 3.4× |
 | 576 | 100% | 7.29×10⁻⁴（光源采样地板） | 1.6× |
 
-最终代理模型采用 K=8（保留 89.7% 能量，前向约 4.7 ms/图）；更高保真场景可临时用
-128/256。基准脚本与逐版图结果不在本发布包中。
+当前默认代理模型采用 K=8（800×800 @ 1 nm；K=8 前向约 4.7 ms/图，
+RTX 3050 历史实测）；更高保真场景可临时用 128/256。基准脚本与逐版图结果
+不在本发布包中。
 
 ## 与代理模型的关系
 
-最终的光刻成像代理模型位于
+当前默认代理模型位于
 [`../Hopkins_surrogate/`](../Hopkins_surrogate/)：它在本包的 SOCS 之上加入
-15% 频域核修正和残差 CNN。若只想调用训练好的代理模型，见
+有界残差 CNN，**不使用频域核修正**。本包仍保留可选的 B-spline 频域核修正
+实现；历史模型 `kernel15_cnn_k8.pt` 使用了它。若只想调用训练好的代理模型，见
 [`../README.md`](../README.md) 和
 [`../Hopkins_surrogate/README.md`](../Hopkins_surrogate/README.md)。

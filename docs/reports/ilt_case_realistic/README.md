@@ -4,7 +4,10 @@ This is a kept demonstration case, not a production ILT recipe.
 
 - Target: `realistic` from `ilt.layouts` (800 × 800, 1 nm/px, periodic;
   three Manhattan nets with pads, bends and landing regions).
-- Imaging model: final `kernel15_cnn_k8.pt` surrogate (K=8 SOCS + 15% kernel + CNN).
+- Imaging model: historical `kernel15_cnn_k8.pt` surrogate
+  (K=8 SOCS + 15% kernel + CNN). The current default is `k8_cnn_default.pt`
+  (K=8 SOCS + CNN, no kernel correction), so these metrics are not directly
+  comparable with the current model.
 - Threshold: `0.346585`; target/printed semantics: 1 = feature.
 - Optimizer: `PixelILT`, 1000 iterations requested,
   hardening 30%, Adam lr 0.08.

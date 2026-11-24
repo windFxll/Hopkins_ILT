@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from scipy import ndimage
 
-THRESHOLD_DAT = 0.346585
+THRESHOLD_DAT = 0.3357889756677475
 
 
 def _as_numpy(x) -> np.ndarray:

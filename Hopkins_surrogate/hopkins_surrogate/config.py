@@ -20,16 +20,16 @@ class SurrogateConfig:
     grid_size: int = 800
     pixel_size_nm: float = 1.0
     wavelength_nm: float = 193.0
-    numerical_aperture: float = 1.35
+    numerical_aperture: float = 0.93
     sigma_in: float = 0.6
     sigma_out: float = 0.9
     source_rings: int = 12
     source_points_per_ring: int = 72
     defocus_nm: float = 0.0
     boundary_mode: str = "periodic"
-    resist_threshold: float = 0.346585
+    resist_threshold: float = 0.3357889756677475
     resist_blur_sigma_nm: float = 0.0
-    aerial_scale: float | None = None
+    aerial_scale: float | None = 0.85107421875
 
     # correction
     num_orders: int = 16
@@ -41,7 +41,7 @@ class SurrogateConfig:
     window_outer: float = 1.0
 
     # loss / threshold (target units are raw .dat units)
-    tau_dat: float = 0.346585
+    tau_dat: float = 0.3357889756677475
     band_width_norm: float = 0.08
     dice_temp_norm: float = 0.03
     lambda_bin: float = 0.3
@@ -61,7 +61,8 @@ class SurrogateConfig:
     def optics(self, scale: float | None = None) -> OpticsConfig:
         """Build the matching :class:`OpticsConfig`.
 
-        ``scale`` overrides ``self.aerial_scale``; ``None`` means 1.0.
+        ``scale`` overrides ``self.aerial_scale``; if both are ``None``,
+        the scale falls back to 1.0.
         """
         s = self.aerial_scale if scale is None else float(scale)
         if s is None:

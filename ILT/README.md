@@ -2,7 +2,7 @@
 
 基于 PyTorch 的像素型逆向光刻（ILT）优化包。光学成像默认由上级目录的
 `Hopkins/` 包提供（可微 Abbe 或 SOCS 前向，运行时可切换），也可以直接换成
-`Hopkins_surrogate/` 的最终代理模型；本包负责 mask 参数化、损失函数和
+`Hopkins_surrogate/` 的当前默认代理模型；本包负责 mask 参数化、损失函数和
 Adam 优化循环。
 
 ## 目录结构
@@ -74,10 +74,10 @@ demo 最多运行 1000 步，在 beta 硬化结束后同时监控 loss、IoU 和
 变化率并可提前收敛。demo profile 用 864 个光源点优化，再用 3456 个光源点独立验证；
 原生 ICCAD profile 使用 1536 点验证。最终输出在工作目录的 `output/`（按案例分目录）。
 
-## 使用最终代理模型（Hopkins_surrogate）
+## 使用当前默认代理模型（Hopkins_surrogate）
 
 `PixelILT` 只要求 imaging 模型可调用、并且暴露 `.config.resist_threshold`。
-最终的 `HopkinsSurrogate` 满足这两个条件，且 `model(mask)` 对 mask 可微：
+当前默认的 `HopkinsSurrogate` 满足这两个条件，且 `model(mask)` 对 mask 可微：
 
 ```python
 from dataclasses import replace

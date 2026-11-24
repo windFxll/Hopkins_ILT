@@ -14,7 +14,7 @@ from torch.utils.data import Dataset
 
 from .config import SurrogateConfig
 
-THRESHOLD_DAT = 0.346585
+THRESHOLD_DAT = 0.3357889756677475
 DEFAULT_DATASET_ROOT = Path("E:/diffusio4ilt_dataset")
 DEFAULT_CACHE_ROOT = Path("E:/hopkins_surrogate/cache_v1")
 

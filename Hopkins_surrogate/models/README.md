@@ -12,6 +12,7 @@
 | 阈值 / scale | **0.3357889756677475** / `0.85107421875` |
 | 训练 | best epoch 23；第 31 epoch 后因主机内存分配失败中断，best checkpoint 完整使用 |
 | val（1000） | clear IoU **0.9942**、full-field rel MSE **≈5e-5** |
+| test（1000） | clear IoU **0.9942** / Dice **0.9971** / feature IoU **0.9803** / CD **0.575 nm** |
 | multiconfig 10 test | 阈值 IoU **0.9922** / CD **0.71 nm**；defocus 0.9942 / 0.47；光源 0.9853 / 1.37；full RMSE 0.0041 / 0.0041 / 0.0187 |
 
 ```python
@@ -42,7 +43,9 @@ out = model.predict(mask)      # threshold = 0.3357889756677475
 后仍未出现新 best 的最终版本。机器可读的完整指标见
 [`metrics.json`](metrics.json)。
 
-## 加载
+## 加载历史模型
+
+默认模型直接调用 `HopkinsSurrogate.from_pretrained()`（见上）；历史模型需显式指定：
 
 ```python
 from hopkins_surrogate import HopkinsSurrogate
@@ -52,7 +55,7 @@ model = HopkinsSurrogate.from_pretrained(
 out = model.predict(mask)      # mask: [800,800], 1=opaque
 ```
 
-checkpoint 内嵌：
+历史 checkpoint 内嵌：
 - SOCS `OpticsConfig`（K=8、864 点光源、193 nm、NA 1.35、periodic）；
 - 15% 核修正参数（实际 mean 15.00%、max 22.54%）；
 - 残差 CNN 权重（hidden=24、downscale=4、`|ΔI| ≤ 0.15`）；
